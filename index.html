@@ -866,6 +866,11 @@ function beginRound() {
   document.getElementById('scoreVal').textContent = gs.score;
   document.getElementById('roundVal').textContent = `${gs.round} / ${ROUNDS}`;
 
+  // 타이머 표시를 즉시 10으로 리셋
+  timerNum.textContent = GAME_TIME;
+  timerArc.style.strokeDashoffset = '0';
+  timerArc.style.stroke = '#e94560';
+
   startTimer();
 }
 
