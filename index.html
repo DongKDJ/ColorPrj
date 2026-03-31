@@ -229,38 +229,6 @@
       transition: opacity .12s;
     }
 
-    /* Brightness vertical strip */
-    .bstrip-wrap {
-      display: flex; flex-direction: column;
-      align-items: center; gap: 8px;
-    }
-    .bstrip-label { font-size: .68rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
-    .bstrip {
-      width: 30px; height: 270px;
-      border-radius: 15px;
-      position: relative;
-      cursor: pointer;
-      user-select: none;
-      touch-action: none;
-      border: 1px solid rgba(255,255,255,.12);
-      overflow: hidden;
-    }
-    .bstrip-fill {
-      position: absolute; inset: 0;
-      border-radius: 15px;
-    }
-    .bstrip-knob {
-      position: absolute;
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      background: #fff;
-      box-shadow: 0 2px 10px rgba(0,0,0,.55);
-      left: 50%;
-      transform: translateX(-50%) translateY(-50%);
-      top: 0%;
-      pointer-events: none;
-    }
-
     .hint { font-size: .78rem; color: var(--muted); text-align: center; line-height: 1.5; }
 
     /* ══════════════════════════════════════════
@@ -457,7 +425,6 @@
       <li class="rule-mobile">색상환을 <strong>누르고 이동</strong>하여 색조·채도를 선택하세요</li>
       <li class="rule-mobile"><strong>손을 떼면</strong> 최종 선택이 확정됩니다</li>
       <!-- Common rules -->
-      <li>오른쪽 <strong>밝기 슬라이더</strong>를 드래그해 명도를 조절하세요</li>
       <li><strong>10초</strong> 안에 선택하지 않으면 자동 제출됩니다</li>
       <li>정확도 <strong>80% 이상</strong>이면 <strong>+1점</strong> 획득!</li>
       <li>총 <strong>10라운드</strong></li>
@@ -515,19 +482,11 @@
     </div>
   </div>
 
-  <!-- Wheel + Brightness -->
+  <!-- Wheel -->
   <div class="wheel-area">
     <div class="wheel-wrap" id="wheelWrap">
       <canvas id="colorWheel" width="270" height="270"></canvas>
       <div class="w-cursor" id="wCursor"></div>
-    </div>
-
-    <div class="bstrip-wrap">
-      <div class="bstrip-label">밝기</div>
-      <div class="bstrip" id="bstrip">
-        <div class="bstrip-fill" id="bstripFill"></div>
-        <div class="bstrip-knob" id="bknob" style="top:0%"></div>
-      </div>
     </div>
   </div>
 
@@ -580,8 +539,8 @@ const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
 // Set hint text
 document.getElementById('hintText').innerHTML = isTouch
-  ? '색상환을 누르고 이동하여 색조·채도 선택 → <strong style="color:var(--text)">손을 떼면 확정</strong> | 슬라이더로 밝기 조절'
-  : '마우스를 색상환 위에서 움직여 색조·채도 선택 → <strong style="color:var(--text)">클릭으로 확정</strong> | 오른쪽 슬라이더로 밝기 조절';
+  ? '색상환을 누르고 이동하여 색을 선택하세요 → <strong style="color:var(--text)">손을 떼면 확정</strong>'
+  : '마우스를 색상환 위에서 움직여 색을 선택하세요 → <strong style="color:var(--text)">클릭으로 확정</strong>';
 
 /* ════════════════════════════════════════
    COLOR UTILITIES
@@ -703,8 +662,7 @@ function applyWheelPoint(p) {
   wCursor.style.opacity    = '1';
   wCursor.style.left       = p.screenX + 'px';
   wCursor.style.top        = p.screenY + 'px';
-  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, gs.val));
-  refreshFill();
+  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, 1));
   refreshSelected();
 }
 
@@ -752,59 +710,17 @@ cvs.addEventListener('touchend', e => {
   confirmSelection();
 }, { passive: false });
 
-/* ════════════════════════════════════════
-   BRIGHTNESS STRIP
-   ════════════════════════════════════════ */
-const bstrip = document.getElementById('bstrip');
-const bknob  = document.getElementById('bknob');
-const bfill  = document.getElementById('bstripFill');
-let   dragB  = false;
-
-function applyBrightness(clientY) {
-  const rect = bstrip.getBoundingClientRect();
-  const pct  = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-  gs.val = 1 - pct;                    // top = brightest
-  bknob.style.top = (pct * 100) + '%';
-  refreshFill();
-  drawWheel(gs.val);
-  refreshSelected();
-}
-
-function refreshFill() {
-  const topColor = toHex(hsvToRgb(gs.hue, gs.sat, 1));
-  bfill.style.background = `linear-gradient(to bottom, ${topColor}, #000)`;
-}
-
-// Mouse
-bstrip.addEventListener('mousedown', e => { if (gs.canAct) { dragB = true; applyBrightness(e.clientY); } });
-document.addEventListener('mousemove', e => { if (dragB && gs.canAct) applyBrightness(e.clientY); });
-document.addEventListener('mouseup',   () => { dragB = false; });
-
-// Touch
-bstrip.addEventListener('touchstart', e => {
-  e.preventDefault();
-  if (!gs.canAct) return;
-  dragB = true;
-  applyBrightness(e.touches[0].clientY);
-}, { passive: false });
-
-bstrip.addEventListener('touchmove', e => {
-  e.preventDefault();
-  if (dragB && gs.canAct) applyBrightness(e.touches[0].clientY);
-}, { passive: false });
-
-document.addEventListener('touchend', () => { dragB = false; });
 
 /* ════════════════════════════════════════
    REFRESH SELECTED COLOR UI
    ════════════════════════════════════════ */
 function refreshSelected() {
-  const rgb = hsvToRgb(gs.hue, gs.sat, gs.val);
+  const rgb = hsvToRgb(gs.hue, gs.sat, 1);
   const hex = toHex(rgb);
   document.getElementById('selSwatch').style.background = hex;
   document.getElementById('selHex').textContent = hex;
 
-  const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
+  const tRgb = hsvToRgb(gs.target.h, gs.target.s, 1);
   const acc  = getAccuracy(rgb, tRgb);
   const el   = document.getElementById('accNum');
   el.textContent = acc.toFixed(1) + '%';
@@ -825,19 +741,14 @@ function beginRound() {
   gs.target = {
     h: Math.random() * 360,
     s: 0.45 + Math.random() * 0.55,
-    v: 0.45 + Math.random() * 0.55,
+    v: 1,   // 명도 고정
   };
   // Random starting position each round
   gs.hue = Math.random() * 360;
   gs.sat = Math.random();
-  gs.val = 0.3 + Math.random() * 0.7;
   gs.canAct = true;
 
-  // Brightness strip
-  const initPct = 1 - gs.val;
-  bknob.style.top = (initPct * 100) + '%';
-  refreshFill();
-  drawWheel(gs.val);
+  drawWheel(1);
 
   // Cursor on wheel
   const angle = gs.hue * Math.PI / 180;
@@ -847,15 +758,15 @@ function beginRound() {
   wCursor.style.left       = (CX + gs.sat * R * Math.cos(angle)) / sx + 'px';
   wCursor.style.top        = (CY + gs.sat * R * Math.sin(angle)) / sy + 'px';
   wCursor.style.opacity    = '1';
-  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, gs.val));
+  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, 1));
 
   // Target swatch
-  const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
+  const tRgb = hsvToRgb(gs.target.h, gs.target.s, 1);
   document.getElementById('targetSwatch').style.background = toHex(tRgb);
   document.getElementById('targetHex').textContent = toHex(tRgb);
 
   // Selected swatch (initial)
-  const sRgb = hsvToRgb(gs.hue, gs.sat, gs.val);
+  const sRgb = hsvToRgb(gs.hue, gs.sat, 1);
   document.getElementById('selSwatch').style.background = toHex(sRgb);
   document.getElementById('selHex').textContent = toHex(sRgb);
 
@@ -923,8 +834,8 @@ function confirmSelection() {
    END ROUND → SHOW RESULT
    ════════════════════════════════════════ */
 function endRound(wasAction) {
-  const sRgb = hsvToRgb(gs.hue, gs.sat, gs.val);
-  const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
+  const sRgb = hsvToRgb(gs.hue, gs.sat, 1);
+  const tRgb = hsvToRgb(gs.target.h, gs.target.s, 1);
   const acc  = getAccuracy(sRgb, tRgb);
   const got  = acc >= THRESHOLD;
 
