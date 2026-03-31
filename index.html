@@ -332,9 +332,7 @@
        RESPONSIVE — TABLET (≤ 680px)
        ══════════════════════════════════════════ */
     @media (max-width: 680px) {
-      #colorWheel   { width: 230px; height: 230px; }
-      .bstrip       { height: 230px; }
-      .wheel-area   { gap: 14px; }
+      #colorWheel { width: 230px; height: 230px; }
     }
 
     /* ══════════════════════════════════════════
@@ -372,9 +370,6 @@
 
       /* Wheel */
       #colorWheel   { width: 200px; height: 200px; }
-      .bstrip       { height: 200px; width: 26px; }
-      .bstrip-knob  { width: 24px; height: 24px; }
-      .wheel-area   { gap: 12px; }
 
       /* Hint */
       .hint { font-size: .7rem; }
@@ -398,12 +393,11 @@
 
     /* ── Very small phones (≤ 360px) ── */
     @media (max-width: 360px) {
-      #colorWheel  { width: 175px; height: 175px; }
-      .bstrip      { height: 175px; }
-      .acc-center  { min-width: 46px; }
-      .acc-num     { font-size: .88rem; }
-      .chex        { font-size: .65rem; }
-      .swatch      { height: 42px; }
+      #colorWheel { width: 175px; height: 175px; }
+      .acc-center { min-width: 46px; }
+      .acc-num    { font-size: .88rem; }
+      .chex       { font-size: .65rem; }
+      .swatch     { height: 42px; }
     }
   </style>
 </head>
@@ -616,7 +610,7 @@ function freshState() {
   return {
     round: 1, score: 0, results: [],
     target: null,
-    hue: 0, sat: 1, val: 1,
+    hue: 0, sat: 1,
     raf: null,
     canAct: false,
     active: false,
@@ -741,14 +735,15 @@ function beginRound() {
   gs.target = {
     h: Math.random() * 360,
     s: 0.45 + Math.random() * 0.55,
-    v: 1,   // 명도 고정
+    v: 0.35 + Math.random() * 0.65,   // 랜덤 명도
   };
   // Random starting position each round
   gs.hue = Math.random() * 360;
   gs.sat = Math.random();
   gs.canAct = true;
 
-  drawWheel(1);
+  // 색상환을 목표색의 명도로 그림 → 플레이어는 색조·채도만 맞추면 됨
+  drawWheel(gs.target.v);
 
   // Cursor on wheel
   const angle = gs.hue * Math.PI / 180;
@@ -758,15 +753,15 @@ function beginRound() {
   wCursor.style.left       = (CX + gs.sat * R * Math.cos(angle)) / sx + 'px';
   wCursor.style.top        = (CY + gs.sat * R * Math.sin(angle)) / sy + 'px';
   wCursor.style.opacity    = '1';
-  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, 1));
+  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, gs.target.v));
 
   // Target swatch
-  const tRgb = hsvToRgb(gs.target.h, gs.target.s, 1);
+  const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
   document.getElementById('targetSwatch').style.background = toHex(tRgb);
   document.getElementById('targetHex').textContent = toHex(tRgb);
 
   // Selected swatch (initial)
-  const sRgb = hsvToRgb(gs.hue, gs.sat, 1);
+  const sRgb = hsvToRgb(gs.hue, gs.sat, gs.target.v);
   document.getElementById('selSwatch').style.background = toHex(sRgb);
   document.getElementById('selHex').textContent = toHex(sRgb);
 
