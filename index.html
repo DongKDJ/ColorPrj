@@ -534,7 +534,7 @@ function drawWheel(brightness) {
    GAME STATE
    ════════════════════════════════════════ */
 const ROUNDS    = 10;
-const GAME_TIME = 5;       // seconds
+const GAME_TIME = 10;      // seconds
 const THRESHOLD = 80;      // % accuracy → +1 point
 
 let gs = {};               // live game state
@@ -654,14 +654,27 @@ function beginRound() {
     s: 0.45 + Math.random() * 0.55,
     v: 0.45 + Math.random() * 0.55,
   };
-  gs.hue = 0; gs.sat = 1; gs.val = 1;
+  // random starting position for the selector each round
+  gs.hue = Math.random() * 360;
+  gs.sat = Math.random();
+  gs.val = 0.3 + Math.random() * 0.7;
   gs.canAct = true;
 
-  // reset brightness strip
-  bknob.style.top = '0%';
+  // brightness strip — position knob to match random val
+  const initPct = 1 - gs.val;
+  bknob.style.top = (initPct * 100) + '%';
   refreshFill();
-  drawWheel(1);
-  wCursor.style.opacity = '0';
+  drawWheel(gs.val);
+
+  // position cursor on wheel to match random hue/sat
+  const angleRad = gs.hue * Math.PI / 180;
+  const cvsRect  = cvs.getBoundingClientRect();
+  const kx = CX + gs.sat * R * Math.cos(angleRad);
+  const ky = CY + gs.sat * R * Math.sin(angleRad);
+  wCursor.style.left       = kx + 'px';
+  wCursor.style.top        = ky + 'px';
+  wCursor.style.opacity    = '1';
+  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, gs.val));
 
   // target swatch
   const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
