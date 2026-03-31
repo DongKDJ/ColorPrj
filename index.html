@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>컬러 매치 — 색상환 게임</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -17,6 +17,10 @@
       --muted:   #55557a;
     }
 
+    html, body {
+      width: 100%; min-height: 100%;
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -25,11 +29,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+      overflow-y: auto;
+      -webkit-tap-highlight-color: transparent;
     }
 
     /* ─── SCREENS ─────────────────────────────── */
-    .screen { display: none; }
+    .screen { display: none; width: 100%; }
     .screen.active {
       display: flex;
       flex-direction: column;
@@ -46,6 +51,7 @@
       cursor: pointer;
       transition: transform .2s, box-shadow .2s;
       letter-spacing: .5px;
+      touch-action: manipulation;
     }
     .btn-primary {
       background: linear-gradient(135deg, #e94560, #7b2ff7);
@@ -63,7 +69,6 @@
       text-align: center;
       padding: 40px 24px;
       max-width: 520px;
-      width: 100%;
     }
 
     .game-title {
@@ -103,6 +108,9 @@
     }
     .rules-card li strong { color: var(--text); }
     .rules-card li::before { content: '▸  '; color: var(--accent); }
+    /* PC-only / Mobile-only rule lines */
+    .rule-pc     { display: list-item; }
+    .rule-mobile { display: none; }
 
     /* ══════════════════════════════════════════
        GAME SCREEN
@@ -110,7 +118,6 @@
     #gameScreen {
       gap: 14px;
       padding: 18px 16px;
-      width: 100%;
       max-width: 820px;
     }
 
@@ -134,9 +141,11 @@
     .timer-wrap {
       position: relative;
       width: 68px; height: 68px;
+      flex-shrink: 0;
     }
     .timer-wrap svg {
       position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
       transform: rotate(-90deg);
     }
     #timerNum {
@@ -155,6 +164,7 @@
 
     .compare-card {
       flex: 1;
+      min-width: 0;
       background: var(--card);
       border-radius: 16px;
       padding: 12px 14px;
@@ -176,6 +186,7 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 4px; min-width: 78px;
+      flex-shrink: 0;
     }
     .acc-label { font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
     .acc-num {
@@ -184,7 +195,7 @@
       transition: color .18s;
     }
 
-    /* ── Wheel + Brightness ── */
+    /* ── Wheel + Brightness area ── */
     .wheel-area {
       display: flex;
       gap: 18px;
@@ -196,13 +207,19 @@
       position: relative;
       cursor: crosshair;
       flex-shrink: 0;
+      touch-action: none;        /* block browser pan/zoom on canvas */
     }
-    #colorWheel { display: block; border-radius: 50%; }
+    #colorWheel {
+      display: block;
+      border-radius: 50%;
+      /* CSS display size — internal resolution stays 270×270 */
+      width: 270px; height: 270px;
+    }
 
     /* cursor ring on wheel */
     .w-cursor {
       position: absolute;
-      width: 22px; height: 22px;
+      width: 26px; height: 26px;
       border-radius: 50%;
       border: 3px solid #fff;
       box-shadow: 0 0 0 2px rgba(0,0,0,.65), 0 0 10px rgba(0,0,0,.4);
@@ -219,21 +236,22 @@
     }
     .bstrip-label { font-size: .68rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
     .bstrip {
-      width: 28px; height: 240px;
-      border-radius: 14px;
+      width: 30px; height: 270px;
+      border-radius: 15px;
       position: relative;
       cursor: pointer;
       user-select: none;
+      touch-action: none;
       border: 1px solid rgba(255,255,255,.12);
       overflow: hidden;
     }
     .bstrip-fill {
       position: absolute; inset: 0;
-      border-radius: 14px;
+      border-radius: 15px;
     }
     .bstrip-knob {
       position: absolute;
-      width: 26px; height: 26px;
+      width: 28px; height: 28px;
       border-radius: 50%;
       background: #fff;
       box-shadow: 0 2px 10px rgba(0,0,0,.55);
@@ -243,7 +261,7 @@
       pointer-events: none;
     }
 
-    .hint { font-size: .78rem; color: var(--muted); text-align: center; }
+    .hint { font-size: .78rem; color: var(--muted); text-align: center; line-height: 1.5; }
 
     /* ══════════════════════════════════════════
        RESULT OVERLAY
@@ -253,8 +271,10 @@
       position: fixed; inset: 0;
       background: rgba(0,0,0,.78);
       backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       align-items: center; justify-content: center;
       z-index: 200;
+      padding: 16px;
     }
     #resultOverlay.show { display: flex; }
 
@@ -263,7 +283,7 @@
       border-radius: 28px;
       padding: 38px 48px;
       text-align: center;
-      max-width: 440px; width: 90%;
+      max-width: 440px; width: 100%;
       border: 1px solid rgba(255,255,255,.08);
       animation: popIn .38s cubic-bezier(.34,1.56,.64,1) both;
     }
@@ -296,7 +316,7 @@
     #endScreen {
       gap: 22px;
       padding: 40px 24px;
-      max-width: 560px; width: 100%;
+      max-width: 560px;
       text-align: center;
     }
     #endScreen h2 { font-size: 2rem; font-weight: 800; }
@@ -339,6 +359,84 @@
       0%   { transform: translateY(0)     rotate(0deg);   opacity: 1; }
       100% { transform: translateY(420px) rotate(760deg); opacity: 0; }
     }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE — TABLET (≤ 680px)
+       ══════════════════════════════════════════ */
+    @media (max-width: 680px) {
+      #colorWheel   { width: 230px; height: 230px; }
+      .bstrip       { height: 230px; }
+      .wheel-area   { gap: 14px; }
+    }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE — MOBILE (≤ 480px)
+       ══════════════════════════════════════════ */
+    @media (max-width: 480px) {
+      body { align-items: flex-start; }
+
+      /* Start screen */
+      #startScreen  { padding: 28px 14px; gap: 18px; }
+      .game-title   { font-size: 2rem; }
+      .game-subtitle{ font-size: .82rem; }
+      .rules-card   { padding: 16px 18px; }
+      .rules-card li{ font-size: .8rem; padding: 4px 0; }
+      .rule-pc      { display: none; }
+      .rule-mobile  { display: list-item; }
+
+      /* Game screen */
+      #gameScreen   { gap: 9px; padding: 10px 10px; }
+
+      /* Header */
+      .game-header  { padding: 9px 12px; border-radius: 13px; }
+      .stat-value   { font-size: 1.15rem; }
+      .stat-label   { font-size: .6rem; }
+      .timer-wrap   { width: 52px; height: 52px; }
+      #timerNum     { font-size: 1rem; }
+
+      /* Compare row */
+      .compare-card { padding: 9px 10px; gap: 5px; border-radius: 12px; }
+      .swatch       { height: 48px; border-radius: 8px; }
+      .chex         { font-size: .72rem; }
+      .acc-center   { min-width: 54px; }
+      .acc-num      { font-size: 1rem; }
+      .acc-label    { font-size: .58rem; }
+
+      /* Wheel */
+      #colorWheel   { width: 200px; height: 200px; }
+      .bstrip       { height: 200px; width: 26px; }
+      .bstrip-knob  { width: 24px; height: 24px; }
+      .wheel-area   { gap: 12px; }
+
+      /* Hint */
+      .hint { font-size: .7rem; }
+
+      /* Result overlay */
+      .result-card  { padding: 26px 18px; border-radius: 20px; }
+      .r-title      { font-size: 1.25rem; margin-bottom: 14px; }
+      .r-emoji      { font-size: 2.2rem; }
+      .r-swatches   { gap: 14px; margin-bottom: 14px; }
+      .r-swatch     { width: 72px; height: 72px; border-radius: 12px; }
+      .r-point      { font-size: 1.9rem; margin-bottom: 16px; }
+      .r-acc        { font-size: .8rem; }
+
+      /* End screen */
+      #endScreen    { padding: 28px 14px; gap: 16px; }
+      #endScreen h2 { font-size: 1.6rem; }
+      .final-num    { font-size: 3.8rem; }
+      .summary-card { padding: 14px 16px; }
+      .r-row        { font-size: .8rem; }
+    }
+
+    /* ── Very small phones (≤ 360px) ── */
+    @media (max-width: 360px) {
+      #colorWheel  { width: 175px; height: 175px; }
+      .bstrip      { height: 175px; }
+      .acc-center  { min-width: 46px; }
+      .acc-num     { font-size: .88rem; }
+      .chex        { font-size: .65rem; }
+      .swatch      { height: 42px; }
+    }
   </style>
 </head>
 <body>
@@ -352,10 +450,15 @@
     <h3>게임 방법</h3>
     <ul>
       <li>왼쪽의 <strong>목표색</strong>을 확인하세요</li>
-      <li>색상환 위에서 마우스를 움직여 <strong>색조 · 채도</strong>를 선택하세요</li>
+      <!-- PC rules -->
+      <li class="rule-pc">색상환 위에서 <strong>마우스를 움직여</strong> 색조·채도를 선택하세요</li>
+      <li class="rule-pc">색상환을 <strong>클릭</strong>하면 최종 선택 확정</li>
+      <!-- Mobile rules -->
+      <li class="rule-mobile">색상환을 <strong>누르고 이동</strong>하여 색조·채도를 선택하세요</li>
+      <li class="rule-mobile"><strong>손을 떼면</strong> 최종 선택이 확정됩니다</li>
+      <!-- Common rules -->
       <li>오른쪽 <strong>밝기 슬라이더</strong>를 드래그해 명도를 조절하세요</li>
-      <li>색상환을 <strong>클릭</strong>하면 최종 선택 확정</li>
-      <li><strong>5초</strong> 안에 선택하지 않으면 자동 제출됩니다</li>
+      <li><strong>10초</strong> 안에 선택하지 않으면 자동 제출됩니다</li>
       <li>정확도 <strong>80% 이상</strong>이면 <strong>+1점</strong> 획득!</li>
       <li>총 <strong>10라운드</strong></li>
     </ul>
@@ -375,7 +478,7 @@
     </div>
 
     <div class="timer-wrap">
-      <svg width="68" height="68" viewBox="0 0 68 68">
+      <svg viewBox="0 0 68 68">
         <circle cx="34" cy="34" r="28"
           fill="none" stroke="rgba(255,255,255,.08)" stroke-width="5"/>
         <circle id="timerArc" cx="34" cy="34" r="28"
@@ -383,7 +486,7 @@
           stroke-linecap="round"
           stroke-dasharray="175.9" stroke-dashoffset="0"/>
       </svg>
-      <div id="timerNum">5</div>
+      <div id="timerNum">10</div>
     </div>
 
     <div class="stat">
@@ -408,7 +511,7 @@
     <div class="compare-card">
       <div class="swatch" id="selSwatch"></div>
       <div class="clabel">선택색</div>
-      <div class="chex" id="selHex">#FF0000</div>
+      <div class="chex" id="selHex">#------</div>
     </div>
   </div>
 
@@ -428,7 +531,7 @@
     </div>
   </div>
 
-  <p class="hint">마우스를 색상환 위에서 움직여 색조·채도 선택 → 클릭으로 확정 | 오른쪽 슬라이더로 밝기 조절</p>
+  <p class="hint" id="hintText"></p>
 
 </section>
 
@@ -471,6 +574,16 @@
 
 <script>
 /* ════════════════════════════════════════
+   DEVICE DETECTION
+   ════════════════════════════════════════ */
+const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+// Set hint text
+document.getElementById('hintText').innerHTML = isTouch
+  ? '색상환을 누르고 이동하여 색조·채도 선택 → <strong style="color:var(--text)">손을 떼면 확정</strong> | 슬라이더로 밝기 조절'
+  : '마우스를 색상환 위에서 움직여 색조·채도 선택 → <strong style="color:var(--text)">클릭으로 확정</strong> | 오른쪽 슬라이더로 밝기 조절';
+
+/* ════════════════════════════════════════
    COLOR UTILITIES
    ════════════════════════════════════════ */
 function hsvToRgb(h, s, v) {
@@ -506,6 +619,7 @@ function getAccuracy(a, b) {
    ════════════════════════════════════════ */
 const cvs  = document.getElementById('colorWheel');
 const cctx = cvs.getContext('2d');
+// Internal canvas resolution (always 270×270)
 const CX = cvs.width / 2, CY = cvs.height / 2;
 const R  = Math.min(CX, CY) - 2;
 
@@ -534,10 +648,10 @@ function drawWheel(brightness) {
    GAME STATE
    ════════════════════════════════════════ */
 const ROUNDS    = 10;
-const GAME_TIME = 10;      // seconds
-const THRESHOLD = 80;      // % accuracy → +1 point
+const GAME_TIME = 10;
+const THRESHOLD = 80;   // % accuracy → +1 point
 
-let gs = {};               // live game state
+let gs = {};
 
 function freshState() {
   return {
@@ -551,6 +665,94 @@ function freshState() {
 }
 
 /* ════════════════════════════════════════
+   WHEEL POINT HELPER
+   Converts screen coords → wheel HSV + cursor CSS position.
+   clamp=true: forces point to wheel edge if outside (for touch).
+   ════════════════════════════════════════ */
+function getWheelPoint(clientX, clientY, clamp = false) {
+  const rect = cvs.getBoundingClientRect();
+  // Scale factor: canvas internal px ÷ CSS display px
+  const sx = cvs.width  / rect.width;
+  const sy = cvs.height / rect.height;
+  // Position in canvas-space (internal pixels)
+  const cx = (clientX - rect.left) * sx;
+  const cy = (clientY - rect.top)  * sy;
+  const dx = cx - CX, dy = cy - CY;
+  const d  = Math.sqrt(dx*dx + dy*dy);
+  if (d > R && !clamp) return null;
+  const angle  = Math.atan2(dy, dx);
+  const clampD = Math.min(d, R - 1);
+  return {
+    hue:     ((angle * 180 / Math.PI) + 360) % 360,
+    sat:     clampD / R,
+    // Cursor position in CSS pixels relative to .wheel-wrap
+    screenX: (CX + clampD * Math.cos(angle)) / sx,
+    screenY: (CY + clampD * Math.sin(angle)) / sy,
+    inWheel: d <= R,
+  };
+}
+
+/* ════════════════════════════════════════
+   APPLY WHEEL POINT (shared by mouse & touch)
+   ════════════════════════════════════════ */
+const wCursor = document.getElementById('wCursor');
+
+function applyWheelPoint(p) {
+  gs.hue = p.hue;
+  gs.sat = p.sat;
+  wCursor.style.opacity    = '1';
+  wCursor.style.left       = p.screenX + 'px';
+  wCursor.style.top        = p.screenY + 'px';
+  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, gs.val));
+  refreshFill();
+  refreshSelected();
+}
+
+/* ════════════════════════════════════════
+   WHEEL — MOUSE EVENTS (PC)
+   ════════════════════════════════════════ */
+cvs.addEventListener('mousemove', e => {
+  if (!gs.canAct) return;
+  const p = getWheelPoint(e.clientX, e.clientY);
+  if (!p) { wCursor.style.opacity = '0'; return; }
+  applyWheelPoint(p);
+});
+
+cvs.addEventListener('mouseleave', () => { wCursor.style.opacity = '0'; });
+
+cvs.addEventListener('click', e => {
+  if (!gs.canAct) return;
+  if (getWheelPoint(e.clientX, e.clientY)) confirmSelection();
+});
+
+/* ════════════════════════════════════════
+   WHEEL — TOUCH EVENTS (Mobile)
+   touchstart / touchmove → update color
+   touchend               → confirm selection
+   ════════════════════════════════════════ */
+cvs.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (!gs.canAct) return;
+  const t = e.touches[0];
+  const p = getWheelPoint(t.clientX, t.clientY, true); // clamp: allow edge touches
+  if (p) applyWheelPoint(p);
+}, { passive: false });
+
+cvs.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!gs.canAct) return;
+  const t = e.touches[0];
+  const p = getWheelPoint(t.clientX, t.clientY, true);
+  if (p) applyWheelPoint(p);
+}, { passive: false });
+
+cvs.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (!gs.canAct) return;
+  confirmSelection();
+}, { passive: false });
+
+/* ════════════════════════════════════════
    BRIGHTNESS STRIP
    ════════════════════════════════════════ */
 const bstrip = document.getElementById('bstrip');
@@ -561,7 +763,7 @@ let   dragB  = false;
 function applyBrightness(clientY) {
   const rect = bstrip.getBoundingClientRect();
   const pct  = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-  gs.val = 1 - pct;                          // top = brightest
+  gs.val = 1 - pct;                    // top = brightest
   bknob.style.top = (pct * 100) + '%';
   refreshFill();
   drawWheel(gs.val);
@@ -573,54 +775,25 @@ function refreshFill() {
   bfill.style.background = `linear-gradient(to bottom, ${topColor}, #000)`;
 }
 
+// Mouse
 bstrip.addEventListener('mousedown', e => { if (gs.canAct) { dragB = true; applyBrightness(e.clientY); } });
 document.addEventListener('mousemove', e => { if (dragB && gs.canAct) applyBrightness(e.clientY); });
 document.addEventListener('mouseup',   () => { dragB = false; });
 
-/* ════════════════════════════════════════
-   WHEEL INTERACTION
-   ════════════════════════════════════════ */
-const wCursor = document.getElementById('wCursor');
-
-function wheelPoint(e) {
-  const rect = cvs.getBoundingClientRect();
-  const sx = cvs.width / rect.width, sy = cvs.height / rect.height;
-  const cx = (e.clientX - rect.left) * sx;
-  const cy = (e.clientY - rect.top)  * sy;
-  const dx = cx - CX, dy = cy - CY;
-  const d  = Math.sqrt(dx*dx + dy*dy);
-  if (d > R) return null;
-  return {
-    hue:     ((Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360,
-    sat:     Math.min(1, d / R),
-    screenX: e.clientX - rect.left,
-    screenY: e.clientY - rect.top,
-  };
-}
-
-cvs.addEventListener('mousemove', e => {
+// Touch
+bstrip.addEventListener('touchstart', e => {
+  e.preventDefault();
   if (!gs.canAct) return;
-  const p = wheelPoint(e);
-  if (!p) { wCursor.style.opacity = '0'; return; }
+  dragB = true;
+  applyBrightness(e.touches[0].clientY);
+}, { passive: false });
 
-  gs.hue = p.hue;
-  gs.sat = p.sat;
+bstrip.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (dragB && gs.canAct) applyBrightness(e.touches[0].clientY);
+}, { passive: false });
 
-  wCursor.style.opacity  = '1';
-  wCursor.style.left     = p.screenX + 'px';
-  wCursor.style.top      = p.screenY + 'px';
-  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, gs.val));
-
-  refreshFill();
-  refreshSelected();
-});
-
-cvs.addEventListener('mouseleave', () => { wCursor.style.opacity = '0'; });
-
-cvs.addEventListener('click', e => {
-  if (!gs.canAct) return;
-  if (wheelPoint(e)) confirmSelection();
-});
+document.addEventListener('touchend', () => { dragB = false; });
 
 /* ════════════════════════════════════════
    REFRESH SELECTED COLOR UI
@@ -654,35 +827,35 @@ function beginRound() {
     s: 0.45 + Math.random() * 0.55,
     v: 0.45 + Math.random() * 0.55,
   };
-  // random starting position for the selector each round
+  // Random starting position each round
   gs.hue = Math.random() * 360;
   gs.sat = Math.random();
   gs.val = 0.3 + Math.random() * 0.7;
   gs.canAct = true;
 
-  // brightness strip — position knob to match random val
+  // Brightness strip
   const initPct = 1 - gs.val;
   bknob.style.top = (initPct * 100) + '%';
   refreshFill();
   drawWheel(gs.val);
 
-  // position cursor on wheel to match random hue/sat
-  const angleRad = gs.hue * Math.PI / 180;
-  const cvsRect  = cvs.getBoundingClientRect();
-  const kx = CX + gs.sat * R * Math.cos(angleRad);
-  const ky = CY + gs.sat * R * Math.sin(angleRad);
-  wCursor.style.left       = kx + 'px';
-  wCursor.style.top        = ky + 'px';
+  // Cursor on wheel
+  const angle = gs.hue * Math.PI / 180;
+  const rect  = cvs.getBoundingClientRect();
+  const sx    = cvs.width  / rect.width;
+  const sy    = cvs.height / rect.height;
+  wCursor.style.left       = (CX + gs.sat * R * Math.cos(angle)) / sx + 'px';
+  wCursor.style.top        = (CY + gs.sat * R * Math.sin(angle)) / sy + 'px';
   wCursor.style.opacity    = '1';
   wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, gs.val));
 
-  // target swatch
+  // Target swatch
   const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
   document.getElementById('targetSwatch').style.background = toHex(tRgb);
   document.getElementById('targetHex').textContent = toHex(tRgb);
 
-  // selected initial (pure red at full brightness)
-  const sRgb = hsvToRgb(0, 1, 1);
+  // Selected swatch (initial)
+  const sRgb = hsvToRgb(gs.hue, gs.sat, gs.val);
   document.getElementById('selSwatch').style.background = toHex(sRgb);
   document.getElementById('selHex').textContent = toHex(sRgb);
 
@@ -744,7 +917,7 @@ function confirmSelection() {
 /* ════════════════════════════════════════
    END ROUND → SHOW RESULT
    ════════════════════════════════════════ */
-function endRound(wasClick) {
+function endRound(wasAction) {
   const sRgb = hsvToRgb(gs.hue, gs.sat, gs.val);
   const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
   const acc  = getAccuracy(sRgb, tRgb);
@@ -757,11 +930,10 @@ function endRound(wasClick) {
     tHex: toHex(tRgb), sHex: toHex(sRgb),
   });
 
-  // populate overlay
   document.getElementById('rEmoji').textContent =
-    !wasClick ? '⏱️' : (got ? '🎯' : '😅');
+    !wasAction ? '⏱️' : (got ? '🎯' : '😅');
   document.getElementById('rTitle').textContent =
-    !wasClick ? '시간 초과!' : (got ? '훌륭해요!' : '아쉽네요...');
+    !wasAction ? '시간 초과!' : (got ? '훌륭해요!' : '아쉽네요...');
 
   document.getElementById('rTgt').style.background = toHex(tRgb);
   document.getElementById('rSel').style.background = toHex(sRgb);
@@ -809,8 +981,8 @@ function showEnd() {
         <span style="color:var(--muted);font-size:.7rem">vs</span>
         <div class="mini-swatch" style="background:${r.sHex}" title="선택색"></div>
       </div>
-      <span style="font-family:monospace; font-size:.85rem">${r.acc.toFixed(1)}%</span>
-      <span style="font-weight:800; color:${r.got ? 'var(--green)' : 'var(--accent)'}">${r.got ? '+1' : '+0'}</span>
+      <span style="font-family:monospace;font-size:.85rem">${r.acc.toFixed(1)}%</span>
+      <span style="font-weight:800;color:${r.got ? 'var(--green)' : 'var(--accent)'}">${r.got ? '+1' : '+0'}</span>
     </div>
   `).join('');
 
@@ -827,6 +999,8 @@ function restartGame() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  // Scroll to top on screen change
+  window.scrollTo(0, 0);
 }
 
 /* ════════════════════════════════════════
@@ -841,9 +1015,9 @@ function spawnParticles(rgb, n) {
   ];
   for (let i = 0; i < n; i++) {
     setTimeout(() => {
-      const p   = document.createElement('div');
+      const p  = document.createElement('div');
       p.className = 'particle';
-      const sz  = 4 + Math.random() * 9;
+      const sz = 4 + Math.random() * 9;
       p.style.cssText = `
         width:${sz}px; height:${sz}px;
         background:${palette[(Math.random()*palette.length)|0]};
@@ -860,7 +1034,7 @@ function spawnParticles(rgb, n) {
 /* ════════════════════════════════════════
    INIT
    ════════════════════════════════════════ */
-drawWheel(1);   // render wheel on start screen for preview feel
+drawWheel(1);
 </script>
 </body>
 </html>
