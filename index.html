@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>컬러 매치 — 색상환 게임</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d0d1a;
+      --surface: #14142a;
+      --card:    #1c1c36;
+      --accent:  #e94560;
+      --green:   #4ecca3;
+      --text:    #e8e8f2;
+      --muted:   #55557a;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ─── SCREENS ─────────────────────────────── */
+    .screen { display: none; }
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ─── BUTTON ──────────────────────────────── */
+    .btn {
+      padding: 13px 40px;
+      border: none;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+      letter-spacing: .5px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #e94560, #7b2ff7);
+      color: #fff;
+      box-shadow: 0 4px 22px rgba(233,69,96,.38);
+    }
+    .btn-primary:hover  { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(233,69,96,.56); }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* ══════════════════════════════════════════
+       START SCREEN
+       ══════════════════════════════════════════ */
+    #startScreen {
+      gap: 26px;
+      text-align: center;
+      padding: 40px 24px;
+      max-width: 520px;
+      width: 100%;
+    }
+
+    .game-title {
+      font-size: 2.8rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #e94560 0%, #7b2ff7 50%, #4ecca3 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+    .game-subtitle {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-top: -8px;
+    }
+
+    .rules-card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 22px 26px;
+      text-align: left;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .rules-card h3 {
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .rules-card li {
+      list-style: none;
+      padding: 5px 0;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    .rules-card li strong { color: var(--text); }
+    .rules-card li::before { content: '▸  '; color: var(--accent); }
+
+    /* ══════════════════════════════════════════
+       GAME SCREEN
+       ══════════════════════════════════════════ */
+    #gameScreen {
+      gap: 14px;
+      padding: 18px 16px;
+      width: 100%;
+      max-width: 820px;
+    }
+
+    /* ── Header ── */
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 12px 24px;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+
+    .stat { text-align: center; }
+    .stat-label { font-size: .68rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+    .stat-value { font-size: 1.55rem; font-weight: 800; }
+
+    /* Timer ring */
+    .timer-wrap {
+      position: relative;
+      width: 68px; height: 68px;
+    }
+    .timer-wrap svg {
+      position: absolute; top: 0; left: 0;
+      transform: rotate(-90deg);
+    }
+    #timerNum {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; font-weight: 800;
+    }
+
+    /* ── Compare row ── */
+    .compare-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      width: 100%;
+    }
+
+    .compare-card {
+      flex: 1;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.06);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .swatch {
+      height: 68px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.1);
+      transition: background .07s;
+    }
+    .clabel { font-size: .68rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+    .chex   { font-family: 'Courier New', monospace; font-size: .9rem; font-weight: 700; }
+
+    .acc-center {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px; min-width: 78px;
+    }
+    .acc-label { font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    .acc-num {
+      font-size: 1.45rem; font-weight: 800;
+      font-family: 'Courier New', monospace;
+      transition: color .18s;
+    }
+
+    /* ── Wheel + Brightness ── */
+    .wheel-area {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wheel-wrap {
+      position: relative;
+      cursor: crosshair;
+      flex-shrink: 0;
+    }
+    #colorWheel { display: block; border-radius: 50%; }
+
+    /* cursor ring on wheel */
+    .w-cursor {
+      position: absolute;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 2px rgba(0,0,0,.65), 0 0 10px rgba(0,0,0,.4);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .12s;
+    }
+
+    /* Brightness vertical strip */
+    .bstrip-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+    }
+    .bstrip-label { font-size: .68rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+    .bstrip {
+      width: 28px; height: 240px;
+      border-radius: 14px;
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      border: 1px solid rgba(255,255,255,.12);
+      overflow: hidden;
+    }
+    .bstrip-fill {
+      position: absolute; inset: 0;
+      border-radius: 14px;
+    }
+    .bstrip-knob {
+      position: absolute;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,.55);
+      left: 50%;
+      transform: translateX(-50%) translateY(-50%);
+      top: 0%;
+      pointer-events: none;
+    }
+
+    .hint { font-size: .78rem; color: var(--muted); text-align: center; }
+
+    /* ══════════════════════════════════════════
+       RESULT OVERLAY
+       ══════════════════════════════════════════ */
+    #resultOverlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.78);
+      backdrop-filter: blur(6px);
+      align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    #resultOverlay.show { display: flex; }
+
+    .result-card {
+      background: var(--card);
+      border-radius: 28px;
+      padding: 38px 48px;
+      text-align: center;
+      max-width: 440px; width: 90%;
+      border: 1px solid rgba(255,255,255,.08);
+      animation: popIn .38s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    @keyframes popIn {
+      from { transform: scale(.55); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .r-emoji { font-size: 2.8rem; margin-bottom: 6px; }
+    .r-title { font-size: 1.55rem; font-weight: 800; margin-bottom: 18px; }
+
+    .r-swatches {
+      display: flex; gap: 20px;
+      justify-content: center; margin-bottom: 20px;
+    }
+    .r-swatch-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .r-swatch {
+      width: 88px; height: 88px;
+      border-radius: 16px;
+      border: 2px solid rgba(255,255,255,.1);
+    }
+    .r-swatch-lbl { font-size: .72rem; color: var(--muted); }
+
+    .r-acc   { color: var(--muted); font-size: .9rem; margin-bottom: 4px; }
+    .r-point { font-size: 2.4rem; font-weight: 900; margin-bottom: 22px; }
+
+    /* ══════════════════════════════════════════
+       END SCREEN
+       ══════════════════════════════════════════ */
+    #endScreen {
+      gap: 22px;
+      padding: 40px 24px;
+      max-width: 560px; width: 100%;
+      text-align: center;
+    }
+    #endScreen h2 { font-size: 2rem; font-weight: 800; }
+
+    .final-num { font-size: 5rem; font-weight: 900; line-height: 1; }
+
+    .summary-card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 20px 22px;
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .summary-card h3 {
+      font-size: .72rem; text-transform: uppercase;
+      letter-spacing: 2px; color: var(--muted); margin-bottom: 12px;
+    }
+    .r-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      font-size: .88rem;
+    }
+    .r-row:last-child { border-bottom: none; }
+    .mini-swatch { width: 20px; height: 20px; border-radius: 5px; }
+    .r-colors { display: flex; gap: 5px; align-items: center; }
+
+    /* ══════════════════════════════════════════
+       PARTICLES
+       ══════════════════════════════════════════ */
+    .particle {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 300;
+      animation: pfall linear forwards;
+    }
+    @keyframes pfall {
+      0%   { transform: translateY(0)     rotate(0deg);   opacity: 1; }
+      100% { transform: translateY(420px) rotate(760deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════ START SCREEN ════════════ -->
+<section id="startScreen" class="screen active">
+  <h1 class="game-title">컬러 매치</h1>
+  <p class="game-subtitle">색상환으로 목표 색을 정확히 재현하라!</p>
+
+  <div class="rules-card">
+    <h3>게임 방법</h3>
+    <ul>
+      <li>왼쪽의 <strong>목표색</strong>을 확인하세요</li>
+      <li>색상환 위에서 마우스를 움직여 <strong>색조 · 채도</strong>를 선택하세요</li>
+      <li>오른쪽 <strong>밝기 슬라이더</strong>를 드래그해 명도를 조절하세요</li>
+      <li>색상환을 <strong>클릭</strong>하면 최종 선택 확정</li>
+      <li><strong>5초</strong> 안에 선택하지 않으면 자동 제출됩니다</li>
+      <li>정확도 <strong>80% 이상</strong>이면 <strong>+1점</strong> 획득!</li>
+      <li>총 <strong>10라운드</strong></li>
+    </ul>
+  </div>
+
+  <button class="btn btn-primary" onclick="startGame()">게임 시작</button>
+</section>
+
+<!-- ════════════ GAME SCREEN ════════════ -->
+<section id="gameScreen" class="screen">
+
+  <!-- Header -->
+  <div class="game-header">
+    <div class="stat">
+      <div class="stat-label">점수</div>
+      <div class="stat-value" id="scoreVal">0</div>
+    </div>
+
+    <div class="timer-wrap">
+      <svg width="68" height="68" viewBox="0 0 68 68">
+        <circle cx="34" cy="34" r="28"
+          fill="none" stroke="rgba(255,255,255,.08)" stroke-width="5"/>
+        <circle id="timerArc" cx="34" cy="34" r="28"
+          fill="none" stroke="#e94560" stroke-width="5"
+          stroke-linecap="round"
+          stroke-dasharray="175.9" stroke-dashoffset="0"/>
+      </svg>
+      <div id="timerNum">5</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">라운드</div>
+      <div class="stat-value" id="roundVal">1 / 10</div>
+    </div>
+  </div>
+
+  <!-- Color comparison -->
+  <div class="compare-row">
+    <div class="compare-card">
+      <div class="swatch" id="targetSwatch"></div>
+      <div class="clabel">목표색</div>
+      <div class="chex" id="targetHex">#------</div>
+    </div>
+
+    <div class="acc-center">
+      <div class="acc-label">정확도</div>
+      <div class="acc-num" id="accNum">--%</div>
+    </div>
+
+    <div class="compare-card">
+      <div class="swatch" id="selSwatch"></div>
+      <div class="clabel">선택색</div>
+      <div class="chex" id="selHex">#FF0000</div>
+    </div>
+  </div>
+
+  <!-- Wheel + Brightness -->
+  <div class="wheel-area">
+    <div class="wheel-wrap" id="wheelWrap">
+      <canvas id="colorWheel" width="270" height="270"></canvas>
+      <div class="w-cursor" id="wCursor"></div>
+    </div>
+
+    <div class="bstrip-wrap">
+      <div class="bstrip-label">밝기</div>
+      <div class="bstrip" id="bstrip">
+        <div class="bstrip-fill" id="bstripFill"></div>
+        <div class="bstrip-knob" id="bknob" style="top:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">마우스를 색상환 위에서 움직여 색조·채도 선택 → 클릭으로 확정 | 오른쪽 슬라이더로 밝기 조절</p>
+
+</section>
+
+<!-- ════════════ RESULT OVERLAY ════════════ -->
+<div id="resultOverlay">
+  <div class="result-card">
+    <div class="r-emoji" id="rEmoji"></div>
+    <div class="r-title" id="rTitle"></div>
+
+    <div class="r-swatches">
+      <div class="r-swatch-wrap">
+        <div class="r-swatch" id="rTgt"></div>
+        <div class="r-swatch-lbl">목표색</div>
+      </div>
+      <div class="r-swatch-wrap">
+        <div class="r-swatch" id="rSel"></div>
+        <div class="r-swatch-lbl">선택색</div>
+      </div>
+    </div>
+
+    <div class="r-acc"  id="rAcc"></div>
+    <div class="r-point" id="rPt"></div>
+    <button class="btn btn-primary" id="nextBtn" onclick="nextRound()">다음 라운드 →</button>
+  </div>
+</div>
+
+<!-- ════════════ END SCREEN ════════════ -->
+<section id="endScreen" class="screen">
+  <h2>게임 종료!</h2>
+  <div class="final-num" id="finalNum"></div>
+  <p style="color:var(--muted)">/ 10 점</p>
+
+  <div class="summary-card">
+    <h3>라운드별 결과</h3>
+    <div id="summaryList"></div>
+  </div>
+
+  <button class="btn btn-primary" onclick="restartGame()">다시 시작</button>
+</section>
+
+<script>
+/* ════════════════════════════════════════
+   COLOR UTILITIES
+   ════════════════════════════════════════ */
+function hsvToRgb(h, s, v) {
+  h = ((h % 360) + 360) % 360;
+  s = Math.max(0, Math.min(1, s));
+  v = Math.max(0, Math.min(1, v));
+  const c = v * s, x = c * (1 - Math.abs(h / 60 % 2 - 1)), m = v - c;
+  let r, g, b;
+  if      (h <  60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else              { r = c; g = 0; b = x; }
+  return { r: Math.round((r+m)*255), g: Math.round((g+m)*255), b: Math.round((b+m)*255) };
+}
+
+function toHex(rgb) {
+  return '#' + [rgb.r, rgb.g, rgb.b]
+    .map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+function colorDist(a, b) {
+  return Math.sqrt((a.r-b.r)**2 + (a.g-b.g)**2 + (a.b-b.b)**2);
+}
+
+function getAccuracy(a, b) {
+  return Math.max(0, (1 - colorDist(a, b) / Math.sqrt(3 * 255**2)) * 100);
+}
+
+/* ════════════════════════════════════════
+   CANVAS — COLOR WHEEL
+   ════════════════════════════════════════ */
+const cvs  = document.getElementById('colorWheel');
+const cctx = cvs.getContext('2d');
+const CX = cvs.width / 2, CY = cvs.height / 2;
+const R  = Math.min(CX, CY) - 2;
+
+function drawWheel(brightness) {
+  const img = cctx.createImageData(cvs.width, cvs.height);
+  for (let py = 0; py < cvs.height; py++) {
+    for (let px = 0; px < cvs.width; px++) {
+      const dx = px - CX, dy = py - CY;
+      const d  = Math.sqrt(dx*dx + dy*dy);
+      const i  = (py * cvs.width + px) * 4;
+      if (d <= R) {
+        const h = ((Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
+        const s = Math.min(1, d / R);
+        const { r, g, b } = hsvToRgb(h, s, brightness);
+        img.data[i]   = r;
+        img.data[i+1] = g;
+        img.data[i+2] = b;
+        img.data[i+3] = d > R - 2 ? Math.round((R - d + 2) / 2 * 255) : 255;
+      }
+    }
+  }
+  cctx.putImageData(img, 0, 0);
+}
+
+/* ════════════════════════════════════════
+   GAME STATE
+   ════════════════════════════════════════ */
+const ROUNDS    = 10;
+const GAME_TIME = 5;       // seconds
+const THRESHOLD = 80;      // % accuracy → +1 point
+
+let gs = {};               // live game state
+
+function freshState() {
+  return {
+    round: 1, score: 0, results: [],
+    target: null,
+    hue: 0, sat: 1, val: 1,
+    raf: null,
+    canAct: false,
+    active: false,
+  };
+}
+
+/* ════════════════════════════════════════
+   BRIGHTNESS STRIP
+   ════════════════════════════════════════ */
+const bstrip = document.getElementById('bstrip');
+const bknob  = document.getElementById('bknob');
+const bfill  = document.getElementById('bstripFill');
+let   dragB  = false;
+
+function applyBrightness(clientY) {
+  const rect = bstrip.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+  gs.val = 1 - pct;                          // top = brightest
+  bknob.style.top = (pct * 100) + '%';
+  refreshFill();
+  drawWheel(gs.val);
+  refreshSelected();
+}
+
+function refreshFill() {
+  const topColor = toHex(hsvToRgb(gs.hue, gs.sat, 1));
+  bfill.style.background = `linear-gradient(to bottom, ${topColor}, #000)`;
+}
+
+bstrip.addEventListener('mousedown', e => { if (gs.canAct) { dragB = true; applyBrightness(e.clientY); } });
+document.addEventListener('mousemove', e => { if (dragB && gs.canAct) applyBrightness(e.clientY); });
+document.addEventListener('mouseup',   () => { dragB = false; });
+
+/* ════════════════════════════════════════
+   WHEEL INTERACTION
+   ════════════════════════════════════════ */
+const wCursor = document.getElementById('wCursor');
+
+function wheelPoint(e) {
+  const rect = cvs.getBoundingClientRect();
+  const sx = cvs.width / rect.width, sy = cvs.height / rect.height;
+  const cx = (e.clientX - rect.left) * sx;
+  const cy = (e.clientY - rect.top)  * sy;
+  const dx = cx - CX, dy = cy - CY;
+  const d  = Math.sqrt(dx*dx + dy*dy);
+  if (d > R) return null;
+  return {
+    hue:     ((Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360,
+    sat:     Math.min(1, d / R),
+    screenX: e.clientX - rect.left,
+    screenY: e.clientY - rect.top,
+  };
+}
+
+cvs.addEventListener('mousemove', e => {
+  if (!gs.canAct) return;
+  const p = wheelPoint(e);
+  if (!p) { wCursor.style.opacity = '0'; return; }
+
+  gs.hue = p.hue;
+  gs.sat = p.sat;
+
+  wCursor.style.opacity  = '1';
+  wCursor.style.left     = p.screenX + 'px';
+  wCursor.style.top      = p.screenY + 'px';
+  wCursor.style.background = toHex(hsvToRgb(gs.hue, gs.sat, gs.val));
+
+  refreshFill();
+  refreshSelected();
+});
+
+cvs.addEventListener('mouseleave', () => { wCursor.style.opacity = '0'; });
+
+cvs.addEventListener('click', e => {
+  if (!gs.canAct) return;
+  if (wheelPoint(e)) confirmSelection();
+});
+
+/* ════════════════════════════════════════
+   REFRESH SELECTED COLOR UI
+   ════════════════════════════════════════ */
+function refreshSelected() {
+  const rgb = hsvToRgb(gs.hue, gs.sat, gs.val);
+  const hex = toHex(rgb);
+  document.getElementById('selSwatch').style.background = hex;
+  document.getElementById('selHex').textContent = hex;
+
+  const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
+  const acc  = getAccuracy(rgb, tRgb);
+  const el   = document.getElementById('accNum');
+  el.textContent = acc.toFixed(1) + '%';
+  el.style.color = acc >= THRESHOLD ? 'var(--green)' : 'var(--accent)';
+}
+
+/* ════════════════════════════════════════
+   GAME FLOW
+   ════════════════════════════════════════ */
+function startGame() {
+  gs = freshState();
+  gs.active = true;
+  showScreen('gameScreen');
+  beginRound();
+}
+
+function beginRound() {
+  gs.target = {
+    h: Math.random() * 360,
+    s: 0.45 + Math.random() * 0.55,
+    v: 0.45 + Math.random() * 0.55,
+  };
+  gs.hue = 0; gs.sat = 1; gs.val = 1;
+  gs.canAct = true;
+
+  // reset brightness strip
+  bknob.style.top = '0%';
+  refreshFill();
+  drawWheel(1);
+  wCursor.style.opacity = '0';
+
+  // target swatch
+  const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
+  document.getElementById('targetSwatch').style.background = toHex(tRgb);
+  document.getElementById('targetHex').textContent = toHex(tRgb);
+
+  // selected initial (pure red at full brightness)
+  const sRgb = hsvToRgb(0, 1, 1);
+  document.getElementById('selSwatch').style.background = toHex(sRgb);
+  document.getElementById('selHex').textContent = toHex(sRgb);
+
+  const accEl = document.getElementById('accNum');
+  accEl.textContent = '--%';
+  accEl.style.color = '';
+
+  document.getElementById('scoreVal').textContent = gs.score;
+  document.getElementById('roundVal').textContent = `${gs.round} / ${ROUNDS}`;
+
+  startTimer();
+}
+
+/* ════════════════════════════════════════
+   TIMER
+   ════════════════════════════════════════ */
+const timerArc = document.getElementById('timerArc');
+const timerNum = document.getElementById('timerNum');
+const CIRC = 2 * Math.PI * 28;   // ≈ 175.9
+
+function startTimer() {
+  let start = null;
+  const dur = GAME_TIME * 1000;
+
+  function tick(ts) {
+    if (!start) start = ts;
+    const elapsed   = ts - start;
+    const remaining = Math.max(0, dur - elapsed);
+    const pct       = remaining / dur;
+
+    timerNum.textContent = Math.ceil(remaining / 1000);
+    timerArc.style.strokeDashoffset = CIRC * (1 - pct);
+    timerArc.style.stroke =
+      pct < 0.33 ? '#ff3344' :
+      pct < 0.66 ? '#ffaa00' : '#e94560';
+
+    if (remaining > 0 && gs.canAct) {
+      gs.raf = requestAnimationFrame(tick);
+    } else if (remaining <= 0 && gs.canAct) {
+      timeUp();
+    }
+  }
+
+  if (gs.raf) cancelAnimationFrame(gs.raf);
+  gs.raf = requestAnimationFrame(tick);
+}
+
+function timeUp() {
+  gs.canAct = false;
+  endRound(false);
+}
+
+function confirmSelection() {
+  gs.canAct = false;
+  if (gs.raf) cancelAnimationFrame(gs.raf);
+  endRound(true);
+}
+
+/* ════════════════════════════════════════
+   END ROUND → SHOW RESULT
+   ════════════════════════════════════════ */
+function endRound(wasClick) {
+  const sRgb = hsvToRgb(gs.hue, gs.sat, gs.val);
+  const tRgb = hsvToRgb(gs.target.h, gs.target.s, gs.target.v);
+  const acc  = getAccuracy(sRgb, tRgb);
+  const got  = acc >= THRESHOLD;
+
+  if (got) gs.score++;
+
+  gs.results.push({
+    round: gs.round, acc, got,
+    tHex: toHex(tRgb), sHex: toHex(sRgb),
+  });
+
+  // populate overlay
+  document.getElementById('rEmoji').textContent =
+    !wasClick ? '⏱️' : (got ? '🎯' : '😅');
+  document.getElementById('rTitle').textContent =
+    !wasClick ? '시간 초과!' : (got ? '훌륭해요!' : '아쉽네요...');
+
+  document.getElementById('rTgt').style.background = toHex(tRgb);
+  document.getElementById('rSel').style.background = toHex(sRgb);
+  document.getElementById('rAcc').textContent =
+    `정확도: ${acc.toFixed(2)}%  |  색상 차이: ${colorDist(sRgb, tRgb).toFixed(1)}`;
+
+  const ptEl = document.getElementById('rPt');
+  ptEl.textContent = got ? '+1점 획득!' : '+0점';
+  ptEl.style.color = got ? 'var(--green)' : 'var(--accent)';
+
+  document.getElementById('nextBtn').textContent =
+    gs.round >= ROUNDS ? '최종 결과 보기 →' : '다음 라운드 →';
+
+  document.getElementById('resultOverlay').classList.add('show');
+
+  if (got) spawnParticles(tRgb, 32);
+}
+
+function nextRound() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  if (gs.round >= ROUNDS) { showEnd(); return; }
+  gs.round++;
+  beginRound();
+}
+
+/* ════════════════════════════════════════
+   END SCREEN
+   ════════════════════════════════════════ */
+function showEnd() {
+  gs.active = false;
+  showScreen('endScreen');
+
+  const el = document.getElementById('finalNum');
+  el.textContent = gs.score;
+  el.style.color =
+    gs.score >= 8 ? 'var(--green)' :
+    gs.score >= 5 ? '#ffaa00'      : 'var(--accent)';
+
+  const list = document.getElementById('summaryList');
+  list.innerHTML = gs.results.map(r => `
+    <div class="r-row">
+      <span style="color:var(--muted); min-width:28px">R${r.round}</span>
+      <div class="r-colors">
+        <div class="mini-swatch" style="background:${r.tHex}" title="목표색"></div>
+        <span style="color:var(--muted);font-size:.7rem">vs</span>
+        <div class="mini-swatch" style="background:${r.sHex}" title="선택색"></div>
+      </div>
+      <span style="font-family:monospace; font-size:.85rem">${r.acc.toFixed(1)}%</span>
+      <span style="font-weight:800; color:${r.got ? 'var(--green)' : 'var(--accent)'}">${r.got ? '+1' : '+0'}</span>
+    </div>
+  `).join('');
+
+  if (gs.score >= 8) spawnParticles({ r:255, g:215, b:0 }, 60);
+}
+
+function restartGame() {
+  showScreen('startScreen');
+}
+
+/* ════════════════════════════════════════
+   SCREEN HELPER
+   ════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ════════════════════════════════════════
+   PARTICLES
+   ════════════════════════════════════════ */
+function spawnParticles(rgb, n) {
+  const palette = [
+    `rgb(${rgb.r},${rgb.g},${rgb.b})`,
+    `hsl(${(Math.random()*360)|0},75%,62%)`,
+    `hsl(${(Math.random()*360)|0},75%,62%)`,
+    '#fff',
+  ];
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => {
+      const p   = document.createElement('div');
+      p.className = 'particle';
+      const sz  = 4 + Math.random() * 9;
+      p.style.cssText = `
+        width:${sz}px; height:${sz}px;
+        background:${palette[(Math.random()*palette.length)|0]};
+        left:${8 + Math.random() * 84}vw;
+        top:${5 + Math.random() * 55}vh;
+        animation-duration:${0.9 + Math.random() * 1.1}s;
+      `;
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 2400);
+    }, i * 22);
+  }
+}
+
+/* ════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════ */
+drawWheel(1);   // render wheel on start screen for preview feel
+</script>
+</body>
+</html>
